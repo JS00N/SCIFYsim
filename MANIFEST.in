@@ -7,6 +7,7 @@ include scifysim/data/n_mathar_air_370co2.dat
 include scifysim/data/n_mathar_h2o.dat
 include scifysim/data/VLTI_AT_trans_sfs.txt
 include scifysim/data/VLTI_UT_trans_sfs.txt
+include scifysim/data/neutral_trans.txt
 include scifysim/config/logger.ini
 include scifysim/config/default_new_4T.ini
 include scifysim/config/default_R2000.ini
