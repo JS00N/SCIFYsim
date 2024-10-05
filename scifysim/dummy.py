@@ -34,4 +34,6 @@ def makesim(fname, target=atarget, compensate_chromatic=True):
     diffuse = [asim.src.sky, asim.src.UT, asim.src.warm_optics, asim.src.combiner, asim.src.cold_optics]
     asim.diffuse = diffuse
     return asim
-asim = makesim(fname)
+
+if __name__ == '__main__':
+    asim = makesim(fname)
