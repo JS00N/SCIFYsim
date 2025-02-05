@@ -21,10 +21,10 @@ atarget = "GJ 86 A"
 #     asim.diffuse = diffuse
 #     return asim
 
-def makesim(fname, target=atarget, compensate_chromatic=True, update_params=True):
+def makesim(fname, target=atarget, compensate_chromatic=True, update_params=True, seed=None):
     asim = sf.utilities.prepare_all(afile=fname,
                         thetarget=target, update_params=update_params,
-                        seed=1, compensate_chromatic=compensate_chromatic,
+                        seed=seed, compensate_chromatic=compensate_chromatic,
                         verbose=False, update_start_end=False)
     asim.point(asim.sequence[0], asim.target,
                         refresh_array=False, disp_override=None)
