@@ -1593,6 +1593,8 @@ class injection_vigneting(object):
 
     def vigneted_spectrum(self, spectrum, lambda_range, exptime, transmission=None):
         """
+        Includes collecting area, throughput (in transmission is not None)
+        and pixel solid angle
         
         transmission: The first object of the transmission-emission chain
         to be used to compute the instrument transmission. This allows to account

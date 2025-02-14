@@ -616,7 +616,7 @@ def GRAVITY(Mc=kernuller.xcoupler,
     theabcd = ABCD(Mc=Mc,
                    ph_shifter_type=ph_shifter_type,
                    wl=wl)
-    F = sp.diag(theabcd, theabcd, theabcd,theabcd,theabcd, theabcd)
+    F = sp.diag(theabcd, theabcd, theabcd, theabcd, theabcd, theabcd)
     M = four2six()
     GRAVITY = F@M
     return GRAVITY #A, B, C, D, E, F

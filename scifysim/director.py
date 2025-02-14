@@ -954,6 +954,7 @@ class simulator(object):
         self.mapsource = type('', (), {})()
         self.mapsource.xx_r = mas2rad(self.vigneting_map.xx)
         self.mapsource.yy_r = mas2rad(self.vigneting_map.yy)
+        self.mapsource.rr_r = mas2rad(self.vigneting_map.rr)
         maps = []
         for i, time in enumerate(self.sequence):
             self.point(self.sequence[i], self.target)
@@ -1033,6 +1034,7 @@ class simulator(object):
         self.mapsource = type('', (), {})()
         self.mapsource.xx_r = mas2rad(self.vigneting_map.xx)
         self.mapsource.yy_r = mas2rad(self.vigneting_map.yy)
+        self.mapsource.rr_r = mas2rad(self.vigneting_map.rr)
         maps = []
         for i, time in enumerate(self.sequence):
             self.point(self.sequence[i], self.target)

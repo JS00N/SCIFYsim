@@ -800,7 +800,7 @@ def get_sensitivity_Tnp(maps, pfa=0.002, pdet=0.9, postproc_mat=None, ref_mag=10
     if len(W.shape) == 3:
         nbkp = W.shape[0]*W.shape[1]
     elif len(W.shape)==2:
-        nbkp = W
+        nbkp = W.shape[0]
     else:
         raise NotImplementedError("Wrong dimension for post-processing matrix")
     if len(maps.shape) == 5:
@@ -1047,8 +1047,11 @@ def make_th_exps(asim, dit, interest, diffuse, obs=None):
         obs.point(asim.sequence[i], asim.target)
         injected = asim.injector.best_injection(asim.lambda_science_range)
         injected = injected.T * asim.corrector.get_phasor(asim.lambda_science_range)
-        array = obs.get_projected_array(obs.altaz, PA=obs.PA)
-        
+        if obs.observatory_location == 'space':
+            array = obs.get_projected_array()
+            
+        else:
+            array = obs.get_projected_array(obs.altaz, PA=obs.PA)
         filtered_starlight = diffuse[0].get_downstream_transmission(asim.lambda_science_range)
         collected = filtered_starlight * asim.injector.collecting * dit
         #set_trace()
