@@ -1600,7 +1600,8 @@ class injection_vigneting(object):
         to be used to compute the instrument transmission. This allows to account
         for throughtput, including airmass.
         
-        spectrum   : Flux density in ph/s/sr/m^2
+        spectrum   : Flux density in ph/s/sr/m^2 
+        
         """
         if transmission is not None:
             throughput = transmission.get_downstream_transmission(lambda_range)

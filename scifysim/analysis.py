@@ -460,6 +460,14 @@ class BasicETC(object):
 
     def get_min_exp_time(self, planet_mag, planet_T, snr=3., dit_0=None,
                         verbose=False):
+        """
+        **Arguments**:
+        * planet_mag : [Vega mag]
+        * planet_T   : [K]
+        * snr        : (3) Signal to noise ratio to reach
+        * dit_0      : (None) [s]
+        * verbose    : (False)
+        """
         if dit_0 is None:
             dit_0 = self.dit_0
         if not isinstance(dit_0, units.quantity.Quantity):
@@ -477,6 +485,13 @@ class BasicETC(object):
 
 
     def planet_photons(self, planet_mag, dit=1., T=None, verbose=False):
+        """
+        **Arguments**:
+        * planet_mag : 
+        * dit        : (1.) [s]
+        * T          T (None) []
+        * verbose    : (False)
+        """
         if not isinstance(dit, units.quantity.Quantity):
             dit = dit * units.s
         if T is None:
@@ -494,6 +509,17 @@ class BasicETC(object):
     def show_signal_noise(self, planet_mag, dit=1., T=None, verbose=True,
                         decompose=True, plot=True,
                         show=True):
+        """
+        **Arguments**:
+        * planet_mag : The magnitude of the planet in the science band (Vega).
+        * dit        : (1.) The individual detector integration time. Typically
+          adjusted for different spectral resolutions. [s]
+        * T          : (None) Temperature [K]
+        * verbose    : (True)
+        * decompose  : (True)
+        * plot       : (True)
+        * show       : (True)
+        """
         planet_photons = self.planet_photons(planet_mag, dit=dit, T=T,
                                             verbose=verbose)
         planet_electrons = planet_photons \
