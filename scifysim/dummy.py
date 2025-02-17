@@ -6,6 +6,7 @@ import scifysim as sf
 
 parent = Path(__file__).parent.absolute()
 atarget = "GJ 86 A"
+fname = str(parent/"config/test_default.ini")
 
 # def makesim(fname, target=atarget):
 #     asim = sf.utilities.prepare_all(afile=fname,
@@ -35,6 +36,7 @@ def makesim(fname, target=atarget, compensate_chromatic=True, update_params=True
     asim.diffuse = diffuse
     return asim
 
+asim = makesim(fname)
+
 if __name__ == '__main__':
-    fname = str(parent/"config/test_default.ini")
     asim = makesim(fname)
