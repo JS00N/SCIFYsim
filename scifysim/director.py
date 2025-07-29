@@ -538,7 +538,7 @@ class simulator(object):
             # `injected` is wavelength dependent complex phase modification at the combiner inputs
             self.integrator.exposure += t_co
             injected = self.phasor_disp.T * next(self.injector.get_efunc)(self.lambda_science_range)
-            tracked = next(self.fringe_tracker.phasor)
+            tracked, wet_phasor = next(self.fringe_tracker.phasor)
             if perfect:
                 injected = self.injector.best_injection(self.lambda_science_range)
                 tracked = np.ones_like(tracked)
@@ -547,7 +547,7 @@ class simulator(object):
                 self.integrator.ft_phase.append(np.angle(tracked[:,0]))
                 self.integrator.inj_phase.append(np.angle(injected[:,0]))
                 self.integrator.inj_amp.append(np.abs(injected[:,0]))
-            injected = (injected * tracked).T * self.corrector.get_phasor(self.lambda_science_range)
+            injected = (injected * tracked * wet_phasor).T * self.corrector.get_phasor(self.lambda_science_range)
             all_injected.append(injected)
             
             combined_starlight = self.combine_light(star, injected, array, collected)
@@ -885,7 +885,7 @@ class simulator(object):
             # coupling = next(self.injector.get_efunc)(self.lambda_science_range)
             # injected = self.phasor_disp.T * coupling
             injected = self.phasor_disp.T * next(self.injector.get_efunc)(self.lambda_science_range)
-            tracked = next(self.fringe_tracker.phasor)
+            tracked, wet_phasor = next(self.fringe_tracker.phasor)
             if monitor_phase:
                 # self.integrator.ft_phase.append(np.angle(tracked[:,0]))
                 # self.integrator.inj_phase.append(np.angle(injected[:,0]))
@@ -895,7 +895,7 @@ class simulator(object):
                 self.integrator.inj_amp.append(np.abs(injected))
             # corrector = self.corrector.get_phasor(self.lambda_science_range)
             # injected = (injected * tracked).T * corrector
-            injected = (injected * tracked).T * self.corrector.get_phasor(self.lambda_science_range)
+            injected = (injected * tracked * wet_phasor).T * self.corrector.get_phasor(self.lambda_science_range)
             all_injected.append(injected)
             # lambdified argument order matters! This should remain synchronous
             # with the lambdify call

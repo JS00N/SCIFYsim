@@ -1260,14 +1260,105 @@ class injector(object):
         
         
 
+def gen_series_from_psd(knee=-1, m1=-2/3, m2=-8/3, t=1000.0, dt=0.05, 
+                        norm=0.3321, seed=None, plot=False):
+    '''
+    Generates a series from a given power spectrum and scaling parameter.
+    
+
+    Parameters
+    ----------
+    knee : float, optional
+        log10(f_knee [Hz]). The default is -1. f_knee = 0.2 v_wind / B ~ 0.1 Hz
+    m1 : float, optional
+        Slope in log-log plot before knee. The default is -2/3.
+    m2 : float, optional
+        Slope in log-log plot after knee. The default is -8/3.
+    t : float, optional
+        half-time in seconds of desired series. The default is 1000.0.
+    dt : TYPE, optional
+        Sampling interval of time series. The default is 0.05.
+    norm : TYPE, optional
+        Normalize the series standard deviation to this. 
+        The default is 0.3321 mol/m^2.
+
+    Notes
+    -----
+    Typically used to generat water vapor column density variations.
+    The default parameters are based on Absil et al. 2022 doi:10.1117/12.2627972
+    In particular, `norm` is obtained from:
+    coldens_rms = 2e19 / u.cm**2
+    coldens_rms = coldens_rms.to(1/u.m**2) / N_A ~ 0.3321 mol/m^2
+
+    '''
+    
+    fmax = 1 / (2 * dt)
+    fmin = 1 / (2 * t)
+    pnts = round(t / dt)
+    ttime = np.arange(2*pnts) * dt
+    
+    freq = np.linspace(fmin, fmax, pnts)
+    df = np.diff(freq).mean()
+    freq_log = np.log10(freq)
+    
+    psd_log = np.where(freq_log <= knee, (freq_log-knee)*m1, (freq_log-knee)*m2)
+    psd = 10**psd_log
+    
+    psd_ = np.pad(psd, [0, pnts-1], 'reflect')
+    psd_ = np.concatenate(([0.0,], psd_))
+    
+    series = utilities.random_series_fft(psd_, seed=seed)
+    series = norm * series / np.std(series)
+    series[0] = 0.0
+    
+    if plot:
+
+        fig_series, ax_series = plt.subplots()
+        ax_series.plot(ttime, series)
+        ax_series.set_xlabel('Time [s]')
+        ax_series.set_ylabel('Piston [mol / m$^2$]')
+        
+        # consistency check
+        freq_test = np.fft.fftfreq(2*pnts, dt)
+        spec_test = np.abs(fft(series))**2
+        ind = freq_test > 0.0
+        freq_test = freq_test[ind]
+        spec_test = spec_test[ind]
+        
+        fig_spec, ax_spec = plt.subplots()
+        ax_spec.loglog(freq_test, spec_test, label='synthetic')
+        ax_spec.loglog(freq, psd, label='model', lw=2.5)
+        ax_spec.legend(loc=3)
+        ax_spec.set_xlabel('Frequency [Hz]')
+        ax_spec.set_ylabel('Amplitude [m$^{-4}$]')
+
+        print(f'Frequency Expected:\n min={freq_test.min()}, '
+              f'max={freq_test.max()}, delta={np.diff(freq_test).mean()}')
+        print(f'Frequency Actual:\n min={fmin}, max={fmax}, delta={df}')
+        print('Series std = ', np.std(series))
+        
+    return series 
+
+
 
     
+def water_vapor_phase_error(sci_lambs, ft_lambs, coldens):
     
+    from scifysim import r_index_h2o, r_index_air
+    from astropy.constants import c
     
+    ft_min, ft_max = ft_lambs.min(), ft_lambs.max()
+    lambs = np.concatenate((np.linspace(ft_min, ft_max, 200), sci_lambs))
     
+    ft_mask = (lambs>=2.0e-6) * (lambs<=2.5e-6)
+    delays = (r_index_h2o(lambs) - r_index_air(lambs)) * coldens[:,None] 
+    freqs = c.value/(lambs)
+    phases = delays * freqs * 2*np.pi
+
+    correction_p = np.mean(phases[:,ft_mask], axis=1) * np.mean(lambs[ft_mask]) / (2*np.pi)
+    corrected_phases = phases[:,:] - 2*np.pi/lambs[None,:] * correction_p[:,None]
     
-    
-    
+    return corrected_phases[:, ~ft_mask]
     
     
     
@@ -1298,7 +1389,7 @@ class fringe_tracker(object):
         
         
         
-    def prepare_time_series(self,lamb, duration=10, replace=True):
+    def prepare_time_series(self, lamb, duration=10, replace=True):
         """
         Call to refresh the time series to use
         duration        : The duration of the time series to prepare
@@ -1307,8 +1398,8 @@ class fringe_tracker(object):
         logit.warning("Preparing a fringe tracking residual time series")
         element_duration = self.ref_dt * self.ref_ps_phase.shape[0]
         elements_needed = int(duration/element_duration) + 1
-        dryps = []
-        disps = []
+        dryps = [] # this contains dry air piston [m]
+        disps = [] # this contains wet air phase [rad]
         for k in range(self.n_tel):
             #Building up to the required length
             dryp = None
@@ -1319,14 +1410,24 @@ class fringe_tracker(object):
                 # Make sure to increment the seed every use
                 if self.seed is not None:
                     self.seed = self.seed+1
-                disp = utilities.random_series_fft(self.ref_ps_disp, matchto=disp, keepall=True, seed=self.seed)
-                if self.seed is not None:
-                    self.seed = self.seed+1
+                # disp = utilities.random_series_fft(self.ref_ps_disp, matchto=disp, keepall=True, seed=self.seed)
+                # if self.seed is not None:
+                #     self.seed = self.seed+1
+            if self.seed is not None:
+                self.seed = self.seed+1
+            # ensure we sample `coldens` for a longer time than `dryp`
+            # samples are regenerated when all `dryp` are consumed. 
+            t = round((element_duration * (elements_needed+1)) / 2.0) + 1
+            coldens = gen_series_from_psd(seed=self.seed, t=float(t), 
+                                dt=self.timestep)*self.wet_scaling
+            disp = water_vapor_phase_error(sci_lambs=lamb, 
+                    ft_lambs=self.config.getarray('fringe tracker', 'wl_ft'), 
+                    coldens=coldens)
             dryps.append(dryp)
             disps.append(disp)
         # Assumbling into an array of columns
         dryps = np.array(dryps).T * self.dry_scaling
-        disps = np.array(disps).T * self.wet_scaling
+        disps = np.array(disps).T 
         logit.warning("Dry pistons and dispersion residuals scaling refreshed")
         
         self.ref_sample_times = np.arange(0, self.ref_dt * dryps.shape[0], self.ref_dt)
@@ -1347,34 +1448,54 @@ class fringe_tracker(object):
         The iterator sets for precomputed or direct interpolation depending on the configuration.
         It also sets for wet or dry computation depending on the configuration.
         """
+        # if not self.precompute:
+        #     available = int(np.max(self.ref_sample_times)/self.timestep)
+        #     if not self.wet_atmosphere:
+        #         i = 0
+        #         while True:
+        #             if i>=available:
+        #                 i = 0
+        #                 self.prepare_time_series(lamb, duration=10, replace=True)
+        #             yield self.get_phasor_dry(i, lamb)
+        #             i += 1
+        #     else:
+        #         logit.error("Wet atmosphere not implemented")
+        #         raise NotImplementedError("Wet atmosphere not implemented")
+        # else:
+        #     self.interpolate_batch(np.max(self.ref_sample_times))
+        #     if not self.wet_atmosphere:
+        #         precomp_length = self.precomputed_series_piston.shape[0]
+        #         i = 0
+        #         while True:
+        #             if i>=precomp_length:
+        #                 i = 0
+        #                 self.prepare_time_series(lamb, duration=10, replace=True)
+        #             yield self.get_phasor_precomputed_dry(i,lamb)
+        #             i += 1
+                    
+        #     else:
+        #         logit.error("Wet atmosphere not implemented")
+        #         raise NotImplementedError("Wet atmosphere not implemented")
         if not self.precompute:
             available = int(np.max(self.ref_sample_times)/self.timestep)
-            if not self.wet_atmosphere:
-                i = 0
-                while True:
-                    if i>=available:
-                        i = 0
-                        self.prepare_time_series(lamb, duration=10, replace=True)
-                    yield self.get_phasor_dry(i, lamb)
-                    i += 1
-            else:
-                logit.error("Wet atmosphere not implemented")
-                raise NotImplementedError("Wet atmosphere not implemented")
+            i = 0
+            while True:
+                if i>=available:
+                    i = 0
+                    self.prepare_time_series(lamb, duration=10, replace=True)
+                yield self.get_phasor_dry(i, lamb), self.get_phasor_wet(i)
+                i += 1
         else:
             self.interpolate_batch(np.max(self.ref_sample_times))
-            if not self.wet_atmosphere:
-                precomp_length = self.precomputed_series_piston.shape[0]
-                i = 0
-                while True:
-                    if i>=precomp_length:
-                        i = 0
-                        self.prepare_time_series(lamb, duration=10, replace=True)
-                    yield self.get_phasor_precomputed_dry(i,lamb)
-                    i += 1
-                    
-            else:
-                logit.error("Wet atmosphere not implemented")
-                raise NotImplementedError("Wet atmosphere not implemented")
+            precomp_length = self.precomputed_series_piston.shape[0]
+            i = 0
+            while True:
+                if i>=precomp_length:
+                    i = 0
+                    self.prepare_time_series(lamb, duration=10, replace=True)
+                yield self.get_phasor_precomputed_dry(i,lamb), self.get_phasor_wet(i)
+                i += 1
+
         
     def prepare_interpolation(self):
         """
@@ -1387,7 +1508,7 @@ class fringe_tracker(object):
         ``self.dispersion_interpolation``
         """
         self.piston_interpolation = interp1d(self.ref_sample_times, self.dry_piston_series, axis=0, kind="linear")
-        self.dispersion_interpolation = interp1d(self.ref_sample_times, self.dispersion_series, axis=0, kind="linear")
+        # self.dispersion_interpolation = interp1d(self.ref_sample_times, self.dispersion_series, axis=0, kind="linear") Not used JS
 
     
     def interpolate_batch(self, duration):
@@ -1406,9 +1527,15 @@ class fringe_tracker(object):
         """
         phase = self.precomputed_series_dispersion[i,:][:,None] *2*np.pi / lamb[None,:]
         return np.ones_like(phase) * np.exp(1j*phase)
+    
     def get_phasor_dry(self, i, lamb):
         phase = self.piston_interpolation(i*self.timestep)[:,None] * 2 * np.pi / lamb[None,:]
         return np.ones_like(phase) * np.exp(1j*phase)
+    
+    def get_phasor_wet(self, i):
+        phase = self.dispersion_series[:,i,:].T
+        return np.ones_like(phase) * np.exp(1j*phase)
+        
     
                                                     
 
