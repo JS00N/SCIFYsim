@@ -316,7 +316,7 @@ class simulator(object):
 
     def point(self, time, target, refresh_array=False, disp_override=None,
                     long_disp_override=None, ld_mode_override=None,
-                    ft_mode="phase"):
+                    ft_mode="phase", altaz_overwrite=None):
         """
         Points the array towards the target. Updates the combiner
 
@@ -328,6 +328,8 @@ class simulator(object):
         * disp_override : None (default) follows the value given by self.transverse_dispersion;
           True force the transverse dispersion;
           False deactivate transverse dispersion.
+          
+        * altaz_overwrite : overwrites target position. AltAz object
         """
         # Figuring out what to do for dispersion
         if self.space:
@@ -351,7 +353,7 @@ class simulator(object):
         else:
             ld_mode = ld_mode_override
 
-        self.obs.point(time, target)
+        self.obs.point(time, target, altaz_overwrite)
         self.reset_static()
         thearray = self.obs.get_projected_array()
         if refresh_array:
@@ -804,7 +806,8 @@ class simulator(object):
                                  monitor_phase=True,
                                  use_tqdm=False,
                                  dtype=np.float32,
-                                 spectro=None):
+                                 spectro=None,
+                                 proj_array=None):
         """
         Warning: at the moment, this assumes pointing has already been performed.
 
@@ -831,8 +834,12 @@ class simulator(object):
         t_co = self.injector.screen[0].step_time
         self.n_subexps = int(texp/t_co)
 
-        #Pointing should be done already
-        array = self.obs.get_projected_array()
+        # Pointing should be done already
+        # Modification for baseline optimization analysis JS
+        if proj_array is None:
+            array = self.obs.get_projected_array()
+        else:
+            array = proj_array
         self.computed_static_xx = self.injector.vigneting.xx
         self.computed_static_yy = self.injector.vigneting.yy
         self.integrator.reset()

@@ -13,7 +13,7 @@ import astropy.units as u
 
 import astroplan
 from astroplan import plots
-from astropy.coordinates import SkyCoord, EarthLocation, AltAz, get_sun
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz, get_sun, Angle
 
 from itertools import combinations
 
@@ -106,7 +106,7 @@ class observatory(object):
         del bl_list
         
         
-    def point(self, obstime, target):
+    def point(self, obstime, target, altaz_overwrite=None):
         """
         Points the array towards the target, updating its position angle (PA) and altaz (used for airmass).
         These are later used by other methods to compute the projection of the array.
@@ -122,6 +122,20 @@ class observatory(object):
         self.altaz = self.observatory_location.altaz(target=target,
                                                    time=obstime)
         self.PA = self.observatory_location.parallactic_angle(obstime, target=target)
+
+        # modification JS
+        if altaz_overwrite is not None:
+            self.altaz = AltAz(obstime=self.altaz.obstime,
+                         location=self.altaz.location,
+                         pressure=self.altaz.pressure,
+                         temperature=self.altaz.temperature,
+                         relative_humidity=self.altaz.relative_humidity,
+                         obswl=self.altaz.obswl,
+                         az=altaz_overwrite.az,
+                         alt=altaz_overwrite.alt)
+            self.PA = Angle(0.0*u.deg)
+        # -------------------
+
         current_proj_array = self.get_projected_array(self.altaz, self.PA)
         self.uv = self.bl_mat.dot(current_proj_array)
         

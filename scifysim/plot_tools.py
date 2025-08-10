@@ -1067,7 +1067,8 @@ def plot_source_position(asim, use_time=True):
     return fig, ax
     
 
-def plot_disk_sensitivity(asim, interp=True, spec_ind=-1, norm=False):
+def plot_disk_sensitivity(asim, interp=True, spec_ind=-1, norm=False,
+                          proj_array=None):
     """
     Plots the spatial distribution of photons received by the instrument
     at each output.
@@ -1121,7 +1122,10 @@ def plot_disk_sensitivity(asim, interp=True, spec_ind=-1, norm=False):
         return ax, out, extent
 
 
-    array = asim.obs.get_projected_array()
+    if proj_array is None:
+        array = asim.obs.get_projected_array()
+    else:
+        array = proj_array
     filtered_starlight = asim.diffuse[0].get_downstream_transmission(asim.lambda_science_range)
     collected = asim.injector.collecting * filtered_starlight * 1.0
     perfect_injection = np.ones((asim.lambda_science_range.shape[0], asim.ntelescopes))\
