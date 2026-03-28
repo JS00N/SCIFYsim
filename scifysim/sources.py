@@ -786,6 +786,20 @@ class exozodi_simple:
         self.exozodiacal_disk()
         if build_map:
             self.build_spectrum_map()
+
+    def temperature_to_distance(self, T):
+        # T: temperature [K]
+        # returns units [au]
+
+        return ((278.3 * self.L_star.to(units.solLum).value**(0.25)) / T)**2 # [au]
+        
+    def distance_to_temperature(self, r):
+        # r: radius [au]
+        # returns units [K]
+        
+        return (278.3*self.L_star.to(units.solLum).value**(0.25)*r**(-0.5))*units.K
+
+
         
     def build_grid(self, angular_res, radial_res):
         """

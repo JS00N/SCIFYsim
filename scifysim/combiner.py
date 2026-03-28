@@ -205,7 +205,7 @@ class combiner(object):
             hasph = True
             M, bright, dark, photo = sf.combiners.angel_woolf_ph(ph_shifters=[0.0, sp.pi/2],
                                                             include_masks=True, tap_ratio=tap_ratio)
-        elif combiner_type in ["angel_woolf_ph_chromatic", "nott_kernel_null"]:
+        elif combiner_type in ["angel_woolf_ph_chromatic", "nott_kernel_null", "asymmetric_bracewell"]:
             hasph = True
             M, bright, dark, photo = sf.combiners.angel_woolf_ph_chromatic(Mc=Mc, ph_shifters=ph_shifters,
                                                             include_masks=True, tap_ratio=tap_ratio,
@@ -216,17 +216,20 @@ class combiner(object):
                 lamb, = M.free_symbols
         # ------------------------------------------------- 
 
-        elif combiner_type == "nott_symmetric":
+        elif combiner_type in ["nott_symmetric", "symmetric_bracewell"]:
+            # For now, the same as "asymmetric_bracewell" and a modification
+            # to the combiner matrix is applied in director.prepare_corrector
+            # this avoids issues with optimizing the shape parameter
             hasph = True
             M, bright, dark, photo = sf.combiners.angel_woolf_ph_chromatic(Mc=Mc, ph_shifters=ph_shifters,
                                                             include_masks=True, tap_ratio=tap_ratio,
-                                                            input_ph_shifters=input_offset*np.array([1,2,0,1]))
+                                                            input_ph_shifters=input_offset*np.array([0,1,0,1]))
             if M.free_symbols == set():
                 lamb = sp.symbols("lambda")
             else:
                 lamb, = M.free_symbols
                 
-        elif combiner_type == "nott_nuller":
+        elif combiner_type in ["nott_nuller", "single_bracewell"]:
             hasph = True
             M, bright, dark, photo = sf.combiners.angel_woolf_ph_chromatic(Mc=Mc, ph_shifters=ph_shifters,
                                                             include_masks=True, tap_ratio=tap_ratio,

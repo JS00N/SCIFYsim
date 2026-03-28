@@ -1,6 +1,7 @@
 
 import kernuller
 import scifysim as sf
+import sympy as sp
 import numpy as np
 from tqdm import tqdm
 import logging
@@ -291,14 +292,22 @@ class simulator(object):
         if optimize is not False:
             # First tune the null depth, then the shape parameter
             asol = self.corrector.tune_static(self.lambda_science_range,
-                                              combiner=self.combiner, apply=optimize)
+                                              combiner=self.combiner, apply=True)
             # Usage of sync_params to preserve a fixed difference (the one already existing) between
             # two of the parameters, preserving the adjustment made previously.
-            sol = self.corrector.tune_static_shape(self.lambda_science_range,
-                             self.combiner,
-                             sync_params=[("b3", "b2", self.corrector.b[3] - self.corrector.b[2]),
-                                         ("c3", "c2", self.corrector.c[3] - self.corrector.c[2])],
-                             apply=True)
+            # ---
+            
+            if self.combiner_type != 'single_bracewell':
+                sol = self.corrector.tune_static_shape(self.lambda_science_range,
+                                 self.combiner,
+                                 sync_params=[("b3", "b2", self.corrector.b[3] - self.corrector.b[2]),
+                                             ("c3", "c2", self.corrector.c[3] - self.corrector.c[2])],
+                                 apply=True)
+                
+                if self.combiner_type == 'symmetric_bracewell':
+                    self.combiner = sf.combiner.combiner.from_config(self.config, ph_shifters=(0,-sp.pi/2)) 
+                    self.combiner.chromatic_matrix(self.lambda_science_range)
+            # ---
 
         ft_wavelengths = config.getarray("fringe tracker", "wl_ft")
         wl_ft = np.linspace(ft_wavelengths[0], ft_wavelengths[-1], 6)
@@ -889,9 +898,9 @@ class simulator(object):
             it_subexp = range(self.n_subexps)
         for i in it_subexp:
             self.integrator.exposure += t_co
-            # coupling = next(self.injector.get_efunc)(self.lambda_science_range)
-            # injected = self.phasor_disp.T * coupling
-            injected = self.phasor_disp.T * next(self.injector.get_efunc)(self.lambda_science_range)
+            coupling = next(self.injector.get_efunc)(self.lambda_science_range)
+            injected = self.phasor_disp.T * coupling
+            # injected = self.phasor_disp.T * next(self.injector.get_efunc)(self.lambda_science_range)
             tracked, wet_phasor = next(self.fringe_tracker.phasor)
             if monitor_phase:
                 # self.integrator.ft_phase.append(np.angle(tracked[:,0]))

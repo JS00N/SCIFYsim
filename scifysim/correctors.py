@@ -209,10 +209,12 @@ def get_es(params, combiner, corrector, lambs):
                                              a=None,
                                              b=bvec,
                                              c=cvec)
+    
+    ind_dark = np.arange(8)[combiner.dark]
     thetas = np.linspace(-np.pi, np.pi, 10000)
     comphasor = np.ones(4)[None,:]*np.exp(1j*thetas[:,None])
     amatcomp = np.einsum("ijk, ik -> ijk", combiner.Mcn, phasor)
-    allcor = np.einsum("ik, mk -> mik", amatcomp[:,3,:], comphasor) - np.conjugate(amatcomp[:, 4,:])[None,:,:]
+    allcor = np.einsum("ik, mk -> mik", amatcomp[:,ind_dark[0],:], comphasor) - np.conjugate(amatcomp[:, ind_dark[1],:])[None,:,:]
     excursion = np.min(np.linalg.norm(allcor, axis=2), axis=0)
     
     return excursion

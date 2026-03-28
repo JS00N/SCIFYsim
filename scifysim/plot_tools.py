@@ -972,10 +972,11 @@ def plot_disk(disk):
     flux = (disk.ss_orig / disk.ds.flatten()).sum(axis=0)[ind] # [ph / s / m^2 / sr]
     flux_total = disk.ss_orig.sum() # [ph / s / m^2]
     
+    # Temperature
     fig, ax_dist = plt.subplots()
     ax_dist.set_aspect(1)
     sc = ax_dist.scatter(disk.xx_f, disk.yy_f, s=size_scale(disk.sigma.flatten())*20, 
-                         c=disk.t_dust.flatten().value, cmap='cool')
+                         c=disk.t_dust.flatten().value, cmap='Oranges')
     ax_dist.set_title('Disk Sampling')
     ax_dist.set_xlabel('Relaveive Position [mas]')
     ax_dist.set_ylabel('Relaveive Position [mas]')
@@ -986,11 +987,50 @@ def plot_disk(disk):
     
     fig.tight_layout()
     out.append(fig)
+    
+    
+    # Surface Density
+    fig, ax_dist = plt.subplots()
+    ax_dist.set_aspect(1)
+    sc = ax_dist.scatter(disk.xx_f, disk.yy_f, s=0.5,
+                         c=disk.sigma.flatten(), cmap='Blues')
+    ax_dist.set_title('Disk Sampling')
+    ax_dist.set_xlabel('Relaveive Position [mas]')
+    ax_dist.set_ylabel('Relaveive Position [mas]')
+    fig.colorbar(sc, label='Surface Density [$\mathrm{AU^2 / AU^2}$]')
 
+    ax_au = ax_dist.secondary_xaxis('top', functions=(mas2au, au2mas))
+    ax_au.set_xlabel('Relaveive Position [au]')
+    
+    fig.tight_layout()
+    out.append(fig)
+    
+    
+    # Flux Density
+    fig, ax_dist = plt.subplots()
+    ax_dist.set_aspect(1)
+    sc = ax_dist.scatter(disk.xx_f, disk.yy_f, s=0.5,
+                         c=(disk.ss_orig / disk.ds.flatten()).sum(axis=0), cmap='Greens')
+    ax_dist.set_title('Disk Sampling')
+    ax_dist.set_xlabel('Relaveive Position [mas]')
+    ax_dist.set_ylabel('Relaveive Position [mas]')
+    fig.colorbar(sc, label='Flux Density [$\mathrm{ph / s / m^2 / sr}$]')
+
+    ax_au = ax_dist.secondary_xaxis('top', functions=(mas2au, au2mas))
+    ax_au.set_xlabel('Relaveive Position [au]')
+    
+    fig.tight_layout()
+    out.append(fig)
+
+
+
+
+    # Properties
     subplot_kw = {'xscale': 'log', 'yscale': 'log'}
-    fig, axes = plt.subplots(1, 3, figsize=(12, 3), sharex=True,
+    fig, axes = plt.subplots(1, 3, figsize=(12, 3.5), sharex=True,
                              subplot_kw=subplot_kw)
-    fig.suptitle('Disk Properties')
+
+    fig.suptitle('Disk Properties', fontsize=16)
     for ax in axes:
         ax.set_xlabel('Radius [AU]')
 
